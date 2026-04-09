@@ -3,7 +3,7 @@
 A simple web-based tool that validates card numbers using the Luhn Algorithm, with a step-by-step breakdown of how validation works.
 
 ##  Live Demo
-https://your-username.github.io/luhn-card-validator/
+https://optimistic496.github.io/luhn-card-validator/
 
 ##  What is the Luhn Algorithm?
 
