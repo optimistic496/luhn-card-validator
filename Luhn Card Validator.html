@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Luhn Card Validator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --color-background-primary: #ffffff;
+      --color-background-secondary: #f5f5f3;
+      --color-background-tertiary: #eeede9;
+      --color-text-primary: #1a1a18;
+      --color-text-secondary: #6b6b67;
+      --color-border-tertiary: rgba(0,0,0,0.12);
+      --color-border-secondary: rgba(0,0,0,0.22);
+      --border-radius-md: 8px;
+      --border-radius-lg: 12px;
+      --font-sans: 'Segoe UI', system-ui, sans-serif;
+      --font-mono: 'Courier New', Courier, monospace;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --color-background-primary: #1e1e1c;
+        --color-background-secondary: #2a2a27;
+        --color-background-tertiary: #323230;
+        --color-text-primary: #f0efea;
+        --color-text-secondary: #9a9994;
+        --color-border-tertiary: rgba(255,255,255,0.1);
+        --color-border-secondary: rgba(255,255,255,0.2);
+      }
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-background-tertiary);
+      color: var(--color-text-primary);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    .wrap { width: 100%; max-width: 540px; }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+      color: var(--color-text-primary);
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: var(--color-text-secondary);
+      margin-bottom: 1.5rem;
+    }
+
+    .card-input-row { display: flex; gap: 10px; margin-bottom: 1rem; }
+
+    .card-input-row input {
+      flex: 1;
+      font-size: 18px;
+      letter-spacing: 2px;
+      font-family: var(--font-mono);
+      padding: 10px 14px;
+      border-radius: var(--border-radius-md);
+      border: 1.5px solid var(--color-border-secondary);
+      background: var(--color-background-primary);
+      color: var(--color-text-primary);
+      outline: none;
+    }
+
+    .card-input-row input:focus { border-color: #378ADD; }
+
+    .card-input-row button {
+      padding: 10px 18px;
+      border-radius: var(--border-radius-md);
+      border: 0.5px solid var(--color-border-secondary);
+      background: var(--color-background-secondary);
+      color: var(--color-text-primary);
+      font-size: 14px;
+      cursor: pointer;
+      white-space: nowrap;
+      font-family: var(--font-sans);
+    }
+
+    .card-input-row button:hover { background: var(--color-background-tertiary); }
+
+    .result-box {
+      border-radius: var(--border-radius-lg);
+      border: 0.5px solid var(--color-border-tertiary);
+      background: var(--color-background-secondary);
+      padding: 1rem 1.25rem;
+      margin-bottom: 1rem;
+      min-height: 72px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .status-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 18px;
+    }
+
+    .status-valid { background: #EAF3DE; color: #3B6D11; }
+    .status-invalid { background: #FCEBEB; color: #A32D2D; }
+    .status-idle {
+      background: var(--color-background-primary);
+      color: var(--color-text-secondary);
+      border: 0.5px solid var(--color-border-tertiary);
+    }
+
+    .result-text { flex: 1; }
+    .result-label { font-size: 15px; font-weight: 500; color: var(--color-text-primary); }
+    .result-sub { font-size: 13px; color: var(--color-text-secondary); margin-top: 2px; }
+
+    .card-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      margin-left: auto;
+    }
+
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+      gap: 6px;
+      margin-top: 0.5rem;
+    }
+
+    .step-cell {
+      background: var(--color-background-primary);
+      border: 0.5px solid var(--color-border-tertiary);
+      border-radius: var(--border-radius-md);
+      padding: 6px;
+      text-align: center;
+    }
+
+    .step-pos { font-size: 10px; color: var(--color-text-secondary); margin-bottom: 2px; }
+    .step-orig { font-size: 13px; font-family: var(--font-mono); color: var(--color-text-primary); }
+    .step-doubled { font-size: 13px; font-family: var(--font-mono); font-weight: 500; }
+    .step-highlight { background: #E6F1FB; border-color: #B5D4F4; }
+
+    .sum-row {
+      margin-top: 12px;
+      font-size: 14px;
+      color: var(--color-text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .sum-val {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--color-text-primary);
+      font-family: var(--font-mono);
+    }
+
+    .section-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--color-text-secondary);
+      margin: 1.2rem 0 0.5rem;
+    }
+
+    .sample-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 0.5rem; }
+
+    .sample-btn {
+      font-size: 12px;
+      font-family: var(--font-mono);
+      padding: 4px 10px;
+      border-radius: var(--border-radius-md);
+      border: 0.5px solid var(--color-border-secondary);
+      background: var(--color-background-primary);
+      color: var(--color-text-secondary);
+      cursor: pointer;
+      letter-spacing: 1px;
+    }
+
+    .sample-btn:hover {
+      background: var(--color-background-secondary);
+      color: var(--color-text-primary);
+    }
+
+    footer {
+      margin-top: 2rem;
+      font-size: 12px;
+      color: var(--color-text-secondary);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Luhn Card Validator</h1>
+    <p class="subtitle">Validates card numbers using the Luhn algorithm with step-by-step breakdown</p>
+
+    <div class="card-input-row">
+      <input type="text" id="cardInput" maxlength="23" placeholder="4111 1111 1111 1111" oninput="onInput(this)" onkeydown="if(event.key==='Enter')validate()" />
+      <button onclick="validate()">Validate</button>
+    </div>
+
+    <div class="result-box" id="resultBox">
+      <div class="status-icon status-idle" id="statusIcon">?</div>
+      <div class="result-text">
+        <div class="result-label" id="resultLabel">Enter a card number above</div>
+        <div class="result-sub" id="resultSub">Supports Visa, Mastercard, Amex, Discover</div>
+      </div>
+      <div id="cardBadge"></div>
+    </div>
+
+    <div id="stepsSection" style="display:none;">
+      <div class="section-label">Luhn steps (right to left)</div>
+      <div class="steps-grid" id="stepsGrid"></div>
+      <div class="sum-row">
+        Total sum: <span class="sum-val" id="sumVal">—</span>
+        &nbsp;·&nbsp; <span id="modMsg"></span>
+      </div>
+    </div>
+
+    <div class="section-label">Try a sample</div>
+    <div class="sample-row">
+      <button class="sample-btn" onclick="loadSample('4111111111111111')">4111 1111 1111 1111</button>
+      <button class="sample-btn" onclick="loadSample('5500005555555559')">5500 0055 5555 5559</button>
+      <button class="sample-btn" onclick="loadSample('378282246310005')">3782 822463 10005</button>
+      <button class="sample-btn" onclick="loadSample('4111111111111112')">4111 1111 1111 1112 ✗</button>
+    </div>
+
+    <footer>Optimistic CyberSec &mdash; Luhn Algorithm Demo</footer>
+  </div>
+
+  <script>
+    const CARDS = [
+      { name: 'Visa',       pattern: /^4/,                                    bg: '#E6F1FB', text: '#0C447C' },
+      { name: 'Mastercard', pattern: /^5[1-5]|^2(2[2-9]|[3-6]\d|7[01])/,    bg: '#FCEBEB', text: '#791F1F' },
+      { name: 'Amex',       pattern: /^3[47]/,                                bg: '#EAF3DE', text: '#27500A' },
+      { name: 'Discover',   pattern: /^6(?:011|5)/,                           bg: '#FAEEDA', text: '#633806' },
+    ];
+
+    function detectCard(digits) {
+      return CARDS.find(c => c.pattern.test(digits)) || null;
+    }
+
+    function onInput(el) {
+      let v = el.value.replace(/\D/g, '').slice(0, 19);
+      el.value = v.replace(/(.{4})/g, '$1 ').trim();
+    }
+
+    function loadSample(num) {
+      const el = document.getElementById('cardInput');
+      el.value = num.replace(/(.{4})/g, '$1 ').trim();
+      validate();
+    }
+
+    function luhnSteps(digits) {
+      const steps = [];
+      let sum = 0;
+      let shouldDouble = false;
+      for (let i = digits.length - 1; i >= 0; i--) {
+        let orig = parseInt(digits[i], 10);
+        let val = orig;
+        if (shouldDouble) {
+          val *= 2;
+          if (val > 9) val -= 9;
+        }
+        sum += val;
+        steps.unshift({ pos: i, orig, val, doubled: shouldDouble });
+        shouldDouble = !shouldDouble;
+      }
+      return { steps, sum };
+    }
+
+    function validate() {
+      const raw = document.getElementById('cardInput').value.replace(/\D/g, '');
+      const resultLabel  = document.getElementById('resultLabel');
+      const resultSub    = document.getElementById('resultSub');
+      const statusIcon   = document.getElementById('statusIcon');
+      const cardBadge    = document.getElementById('cardBadge');
+      const stepsSection = document.getElementById('stepsSection');
+      const stepsGrid    = document.getElementById('stepsGrid');
+      const sumVal       = document.getElementById('sumVal');
+      const modMsg       = document.getElementById('modMsg');
+
+      if (raw.length < 8) {
+        resultLabel.textContent = 'Too short';
+        resultSub.textContent   = 'Card numbers are 13–19 digits';
+        statusIcon.className    = 'status-icon status-idle';
+        statusIcon.textContent  = '?';
+        cardBadge.innerHTML     = '';
+        stepsSection.style.display = 'none';
+        return;
+      }
+
+      const { steps, sum } = luhnSteps(raw);
+      const valid = sum % 10 === 0;
+      const card  = detectCard(raw);
+
+      statusIcon.className   = 'status-icon ' + (valid ? 'status-valid' : 'status-invalid');
+      statusIcon.textContent = valid ? '✓' : '✗';
+      resultLabel.textContent = valid ? 'Valid card number' : 'Invalid card number';
+      resultSub.textContent   = valid
+        ? 'Passes the Luhn check — structurally correct'
+        : 'Fails the Luhn check — digit error detected';
+
+      cardBadge.innerHTML = card
+        ? `<span class="card-badge" style="background:${card.bg};color:${card.text};">${card.name}</span>`
+        : '';
+
+      stepsGrid.innerHTML = steps.map(s => `
+        <div class="step-cell ${s.doubled ? 'step-highlight' : ''}">
+          <div class="step-pos">pos ${s.pos}</div>
+          <div class="step-orig">${s.orig}</div>
+          ${s.doubled
+            ? `<div class="step-doubled" style="color:#185FA5;">×2=${s.val}</div>`
+            : `<div class="step-doubled" style="color:var(--color-text-secondary);">—</div>`}
+        </div>`).join('');
+
+      sumVal.textContent = sum;
+      modMsg.innerHTML = `<span style="font-family:var(--font-mono);">${sum} % 10 = ${sum % 10}</span>
+        &nbsp;→&nbsp;
+        <span style="color:${valid ? '#3B6D11' : '#A32D2D'};font-weight:500;">${valid ? 'valid' : 'invalid'}</span>`;
+      stepsSection.style.display = 'block';
+    }
+  </script>
+</body>
+</html>
